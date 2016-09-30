@@ -7,6 +7,8 @@ benchmarking an internet connection.
 ## Heads up
 _2016-09-11: Next version of speedtest-csv will use `--sep '\t'` and `--standardize` as the default.  If you are relying on the current defaults, make sure to update your code to use `--sep ';'` and `--no-standardize` if you want backward compatibility._
 
+_2016-09-29: This forked update adds additional functionality to allow saving the output statistics directly to ThingSpeak, Slack, a Google Sheet, or an IFTTT channel.  It also updates the way in which it will save directly to a CSV file if that is a desired output.
+
 ## Requirements
 
 * The `speedtest-csv` tool requires:
@@ -64,16 +66,24 @@ Options:
  --debug           Output extra debug information
  --header          Display field names (only)
  --help            This help
- --last            Use most recent stats, iff available
+ --last            Use most recent stats, if available
                    (avoids calling `speedtest-cli`)
  --quote <str>     Quote fields using <str>
  --sep <str>       Separate fields using <str>
  --share           Generate and provide a URL to the speedtest.net
-                   share results image
+                   share results image (enabled by default)
  --no-share        Disable --share
  --standardize     Standardize units and number formats
  --no-standardize  Disable --standardize
  --version         Display version
+
+ --thingspeak      Send data to IoT Sensor Data site, thingspeak.com
+ --ifttt	       Send data to an IFTTT channel for action
+ --slack	       Send data to a Slack channel for notification
+ --google	       Send data directly to a Google Sheet
+
+ --outputCSV       Output data to CSV formated text file (enabled by default)
+ --no-outputCSV    Disable --outputCSV
 
 Any other options are passed to speedtest-cli as is.
 
