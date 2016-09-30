@@ -6,16 +6,24 @@
 ###  --debug           Output extra debug information
 ###  --header          Display field names (only)
 ###  --help            This help
-###  --last            Use most recent stats, iff available
+###  --last            Use most recent stats, if available
 ###                    (avoids calling `speedtest-cli`)
 ###  --quote <str>     Quote fields using <str>
 ###  --sep <str>       Separate fields using <str>
 ###  --share           Generate and provide a URL to the speedtest.net
-###                    share results image
+###                    share results image (enabled by default)
 ###  --no-share        Disable --share
 ###  --standardize     Standardize units and number formats
 ###  --no-standardize  Disable --standardize
 ###  --version         Display version
+###
+###  --thingspeak      Send data to IoT Sensor Data site, thingspeak.com
+###  --ifttt	       Send data to an IFTTT channel for action
+###  --slack	       Send data to a Slack channel for notification
+###  --google	       Send data directly to a Google Sheet
+###
+###  --outputCSV       Output data to CSV formated text file (enabled by default)
+###  --no-outputCSV    Disable --outputCSV
 ###
 ### Any other options are passed to speedtest-cli as is.
 ###
@@ -25,6 +33,22 @@
 ###
 ### Copyright: 2014-2016 Henrik Bengtsson
 ### License: GPL (>= 2.1) [https://www.gnu.org/licenses/gpl.html]
+
+#####
+# Set variables if using ThingSpeak, IFTTT, or Slack
+TSkey="Your ThingSpeak API Key"
+IFTTTkey="Your IFTTT API Key"
+IFTTTeventname="ATTBandwidth"
+# Add in the username to display in your Slack channel
+SlackUsername="ATT-bot"
+SlackURL_key="https://hooks.slack.com/services/KEY01/KEY02/KEY03"
+# See below for URL with example information
+# You need to enter the script ID created once you make your script publicly accessible
+GoogleScriptID="Your Google Sheet Script ID"
+CSVPath="/home/pi/"
+CSVFile="speedtest-output.csv"
+#####
+
 call="$0 $*"
 
 # Temporary file holding speedtest-cli output
@@ -59,6 +83,11 @@ share=TRUE
 last=FALSE
 version=FALSE
 help=FALSE
+thingspeak=FALSE
+ifttt=FALSE
+slack=FALSE
+google=FALSE
+outputCSV=TRUE
 
 # Character for separating values
 sep=";"
@@ -90,6 +119,18 @@ while [[ $# > 0 ]]; do
         debug=TRUE
     elif test "$1" == "--version"; then
         version=TRUE
+    elif test "$1" == "--thingspeak"; then
+        thingspeak=TRUE
+    elif test "$1" == "--ifttt"; then
+        ifttt=TRUE
+    elif test "$1" == "--slack"; then
+        slack=TRUE
+    elif test "$1" == "--google"; then
+        google=TRUE
+    elif test "$1" == "--outputCSV"; then
+        google=TRUE
+    elif test "$1" == "--no-outputCSV"; then
+        google=FALSE
     elif test "$1" == "--help"; then
         help=TRUE
     else
@@ -217,7 +258,50 @@ else
     mdebug "share_url: '$share_url'"
 fi
 
-  
+# Update values to just pull out raw numbers
+value1=`echo $server_ping | cut -d" " -f1`
+value2=`echo $download | cut -d" " -f1`
+value3=`echo $upload | cut -d" " -f1`
+
+# Send your speed data to ThingSpeak for easy graphing and visualization
+# https://thingspeak.com/
+#
+if [[ $thingspeak == TRUE ]]; then
+	mdebug "sending to ThingSpeak"
+	curl --silent --request POST --header "X-THINGSPEAKAPIKEY: $TSkey" --data "field1=$value1&field2=$value2&field3=$value3" "https://api.thingspeak.com/update"
+fi
+
+# Leverage an IFTTT channel to publish your data to a Google Sheet or elsewhere
+#
+if [[ $ifttt == TRUE ]]; then
+	mdebug "sending to IFTTT"
+	IFTTTjson="{\"value1\":\"${value1}\",\"value2\":\"${value2}\",\"value3\":\"${value3}\"}"
+	curl --silent --request POST --header "Content-Type: application/json" --data "${IFTTTjson}" https://maker.ifttt.com/trigger/${IFTTTeventname}/with/key/${IFTTTkey} >/dev/null
+fi
+
+# Monitor your stats in realtime on your own Slack channel
+# https://api.slack.com/incoming-webhooks
+#
+if [[ $slack == TRUE ]]; then
+	mdebug "sending to Slack"
+	Slackjson="{\"text\":\"Ping time = ${server_ping}\nDownload = ${download}\nUpload = ${upload}\", \"username\":\"${SlackUsername}\"}"
+	curl --silent --request POST --header "Content-Type: application/json" --data "${Slackjson}" ${SlackURL_key}
+fi
+
+# Send your stats directly to a Google Sheet to track and create your own graphs
+# Information / guidance (example) on how to set up your Google Sheet and associate Script can be found here:
+# http://stackoverflow.com/questions/17860449/insert-new-rows-into-google-spreadsheet-via-curl-php-how
+#
+if [[ $google == TRUE ]]; then
+	mdebug "sending to Google Sheets"
+	curl --silent -L "https://script.google.com/macros/s/${GoogleScriptID}/exec?Ping=${value1}&Download=${value2}&Upload=${value3}"
+fi
+
 # Output CSV results
-sep="$quote$sep$quote"
-printf "$quote$start$sep$stop$sep$from$sep$from_ip$sep$server$sep$server_dist$sep$server_ping$sep$download$sep$upload$sep$share_url$quote\n"
+# Outputs to local file
+#
+if [[ $outputCSV == TRUE ]]; then
+	mdebug "sending to local CSV output"
+	sep="$quote$sep$quote"
+	printf "$quote$start$sep$stop$sep$from$sep$from_ip$sep$server$sep$server_dist$sep$server_ping$sep$download$sep$upload$sep$share_url$quote\n" >> $CSVPath$CSVFile
+fi
