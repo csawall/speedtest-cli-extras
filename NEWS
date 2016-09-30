@@ -1,6 +1,16 @@
 speedtest-cli-extras
 ====================
 
+Version 1.2.1 (2016-09-29)
+* Updates to speedtest-csv:
+ - Added several options to send results directly to ThingSpeak,
+   Slack, Google Sheets, or an IFTTT channel.
+ - Added --thingspeak, --ifttt, --slack --google options.
+ - Modified how script writes to primary CSV output file; sets file
+   directly vs. directly to console and then needing to redirect to 
+   a file.  Added --outputCSV and --no-outputCSV.
+   
+
 Version 1.2.0 (2016-08-25)
 * Updates to speedtest-csv:
   - Added options --share and --no-share for controlling whether
